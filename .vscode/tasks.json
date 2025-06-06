@@ -1,14 +1,20 @@
 {
+	// See https://code.visualstudio.com/docs/editor/tasks for more information
 	"version": "2.0.0",
 	"tasks": [
+		{
+			"label": "Build OcrConsoleApp",
+			"type": "shell",
+			"command": "dotnet build POCMistralOCR/POCMistralOCR.csproj",
+			"group": "build",
+			"problemMatcher": "$msCompile"
+		},
 		{
 			"label": "Run OcrConsoleApp",
 			"type": "shell",
 			"command": "dotnet run --project POCMistralOCR/POCMistralOCR.csproj",
-			"group": "build",
-			"problemMatcher": [
-				"$msCompile"
-			]
+			"group": "test",
+			"problemMatcher": []
 		}
 	]
 }

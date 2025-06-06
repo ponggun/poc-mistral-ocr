@@ -20,6 +20,14 @@ POCMistralOCR/
 └── ...
 ```
 
+## การใช้งานและขอ Access Token สำหรับ Mistral OCR
+
+- สามารถศึกษาข้อมูลเกี่ยวกับ Mistral OCR ได้ที่เว็บไซต์ทางการ: https://docs.mistral.ai/capabilities/OCR/basic_ocr/
+- การขอ Access Token (API Key):
+  1. สมัครสมาชิกหรือเข้าสู่ระบบที่ https://console.mistral.ai/
+  2. ไปที่เมนู API Keys แล้วสร้าง API Key ใหม่
+  3. นำ API Key ที่ได้ไปใส่ในไฟล์ `POCMistralOCR/appsettings.json` ในส่วน `MistralOCR:ApiKey`
+
 ## วิธีการใช้งาน
 
 1. ติดตั้ง .NET 8.0 หรือเวอร์ชันที่รองรับ
@@ -31,16 +39,29 @@ POCMistralOCR/
    dotnet build
    ```
 
-3. รันโปรแกรม
+3. รันโปรแกรม (ควรรันในโฟลเดอร์ POCMistralOCR หรือระบุ path ของโปรเจกต์ย่อยให้ถูกต้อง)
+   - ตัวอย่าง:
 
-   ```sh
-   dotnet run --project POCMistralOCR
-   ```
+     ```sh
+     cd POCMistralOCR
+     dotnet run
+     ```
+
+   - หรือจาก root folder:
+
+     ```sh
+     dotnet run --project POCMistralOCR/POCMistralOCR.csproj
+     ```
+
+   - **หากใช้ Visual Studio Code สามารถรันหรือ build โครงการได้ง่าย ๆ ด้วย VS Code Tasks:**
+     - เปิด Command Palette (กด `F1` หรือ `Cmd+Shift+P`)
+     - เลือก `Tasks: Run Task`
+     - เลือก `Build OcrConsoleApp` เพื่อ build หรือ `Run OcrConsoleApp` เพื่อรันโปรแกรม
 
 4. นำไฟล์ PDF หรือรูปภาพที่ต้องการแปลงไปไว้ในโฟลเดอร์ `docs/input/`
 5. ผลลัพธ์จะถูกบันทึกไว้ในโฟลเดอร์ `docs/output/`
 
-## โฟลเดอร์ input และ output
+### โฟลเดอร์ input และ output
 
 - **docs/input/**
   - ใช้สำหรับวางไฟล์ PDF หรือรูปภาพที่ต้องการแปลงข้อความ เช่น `1.Scanned.pdf`, `2.TablePure.pdf` เป็นต้น
@@ -50,16 +71,10 @@ POCMistralOCR/
   - จะสร้างโฟลเดอร์ย่อยตามชื่อไฟล์ต้นฉบับ เช่น `1.Scanned/`, `2.TablePure/` เป็นต้น
   - ในแต่ละโฟลเดอร์ย่อยจะมีโฟลเดอร์ย่อยอีก เช่น
     - `0.SplitPdfToImages/` : เก็บไฟล์ภาพที่แยกออกมาจากแต่ละหน้า PDF (เช่น .png)
-    - `1.MistralOCR/markdown/` : เก็บไฟล์ผลลัพธ์ที่ได้จากการ OCR ในรูปแบบ Markdown (.md)
+    - `1.MistralOCR/` : เก็บไฟล์ผลลัพธ์ที่ได้จากการ OCR ในรูปแบบ Markdown (.md)
   - สามารถนำผลลัพธ์เหล่านี้ไปใช้งานต่อได้ตามต้องการ
 
-### วิธีใช้งาน input/output
-
-1. นำไฟล์ PDF หรือรูปภาพที่ต้องการแปลงไปไว้ใน `docs/input/`
-2. รันโปรแกรมตามขั้นตอนในหัวข้อ "วิธีการใช้งาน"
-3. ตรวจสอบผลลัพธ์ที่ได้ใน `docs/output/` ซึ่งจะแยกตามชื่อไฟล์ต้นฉบับและมีโครงสร้างโฟลเดอร์ย่อยสำหรับแต่ละขั้นตอน
-
-## โครงสร้างไฟล์ใน docs/input และ docs/output (โดยสังเขป)
+#### โครงสร้างไฟล์ใน docs/input และ docs/output (โดยสังเขป)
 
 - **docs/input/**
   - วางไฟล์ PDF หรือรูปภาพที่ต้องการแปลง เช่น
@@ -76,11 +91,11 @@ POCMistralOCR/
     - 4.TextWithTableWithImage/
   - ในแต่ละโฟลเดอร์ย่อยจะประกอบด้วย:
     - 0.SplitPdfToImages/   (เก็บไฟล์ .png ที่แยกจากแต่ละหน้า PDF)
-    - 1.MistralOCR/markdown/   (เก็บไฟล์ .md ผลลัพธ์จาก OCR)
+    - 1.MistralOCR/   (เก็บไฟล์ .md ผลลัพธ์จาก OCR)
 
 ตัวอย่าง:
 
-```
+```text
 docs/
 ├── input/
 │   ├── 1.Scanned.pdf
@@ -92,23 +107,14 @@ docs/
     │   │   ├── 1.Scanned-1.png
     │   │   └── ...
     │   └── 1.MistralOCR/
-    │       └── markdown/
-    │           ├── 1.Scanned-1.md
-    │           └── ...
+    │       ├── 1.Scanned-1.md
+    │       └── ...
     └── ...
 ```
 
 ## การตั้งค่า
 
 สามารถแก้ไขค่าต่าง ๆ ได้ในไฟล์ `POCMistralOCR/appsettings.json`
-
-## การใช้งานและขอ Access Token สำหรับ Mistral OCR
-
-- สามารถศึกษาข้อมูลเกี่ยวกับ Mistral OCR ได้ที่เว็บไซต์ทางการ: https://docs.mistral.ai/capabilities/OCR/basic_ocr/
-- การขอ Access Token (API Key):
-  1. สมัครสมาชิกหรือเข้าสู่ระบบที่ https://console.mistral.ai/
-  2. ไปที่เมนู API Keys แล้วสร้าง API Key ใหม่
-  3. นำ API Key ที่ได้ไปใส่ในไฟล์ `POCMistralOCR/appsettings.json` ในส่วน `MistralOCR:ApiKey`
 
 ## License
 

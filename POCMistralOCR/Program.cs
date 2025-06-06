@@ -27,10 +27,14 @@ public static class Program
             var mistralApiKey = configuration["MistralOCR:ApiKey"] ?? throw new InvalidOperationException("Mistral API key not configured");
             var mistralEndpoint = configuration["MistralOCR:Endpoint"] ?? "https://api.mistral.ai/v1/chat/completions";
 
-            foreach (var inputPath in inputFiles)
+            foreach (var inputPath in inputFiles.OrderBy(f => f, StringComparer.OrdinalIgnoreCase))
             {
                 string inputFileName = Path.GetFileName(inputPath);
                 string outputPath = Path.Combine(rootDocumentPath, "output", Path.GetFileNameWithoutExtension(inputPath));
+
+                // clear output directory
+                if (Directory.Exists(outputPath))
+                    Directory.Delete(outputPath, true);
 
                 Console.WriteLine($"Processing: {inputFileName}");
                 Console.WriteLine($"Input path: {inputPath}");
@@ -45,7 +49,7 @@ public static class Program
                 // Split PDF into images
                 Console.WriteLine($"Splitting PDF into images...");
                 string imagesOutputDir = Path.Combine(outputPath, "0.SplitPdfToImages");
-                string mdMistralOutputDir = Path.Combine(outputPath, "1.MistralOCR", "markdown");
+                string mdMistralOutputDir = Path.Combine(outputPath, "1.MistralOCR");
 
                 Directory.CreateDirectory(imagesOutputDir);
                 Directory.CreateDirectory(mdMistralOutputDir);
@@ -57,7 +61,7 @@ public static class Program
                     var mistralResult = await PerformMistralOcrAsync(mistralApiKey, mistralEndpoint, pageImageFile);
 
                     // Save Mistral OCR result as md file
-                    string mistralMdOutputPath = Path.Combine(mdMistralOutputDir, $"{Path.GetFileNameWithoutExtension(pageImageFile)}.md");
+                    string mistralMdOutputPath = Path.Combine(mdMistralOutputDir, $"{Path.GetFileNameWithoutExtension(pageImageFile)}");
                     await SaveMistralOcrMarkdownToFileAsync(mistralMdOutputPath, mistralResult);
                 }
 
@@ -117,7 +121,7 @@ public static class Program
     //private static async Task<(string, MistralOcrResponse)> PerformMistralOcrAsync(string apiKey, string endpoint, string filePath)
     private static async Task<string> PerformMistralOcrAsync(string apiKey, string endpoint, string filePath)
     {
-        Console.WriteLine("Performing OCR with Mistral..."+ filePath);
+        Console.WriteLine("Performing OCR with Mistral..." + filePath);
 
         using var httpClient = new HttpClient();
         httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {apiKey}");
