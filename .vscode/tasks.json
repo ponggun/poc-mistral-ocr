@@ -1,0 +1,14 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Run OcrConsoleApp",
+			"type": "shell",
+			"command": "dotnet run --project POCMistralOCR/POCMistralOCR.csproj",
+			"group": "build",
+			"problemMatcher": [
+				"$msCompile"
+			]
+		}
+	]
+}
