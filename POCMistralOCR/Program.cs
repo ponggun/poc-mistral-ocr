@@ -4,6 +4,7 @@ using Microsoft.Extensions.Configuration;
 using SkiaSharp;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace OcrConsoleApp;
 
@@ -56,14 +57,24 @@ public static class Program
 
                 var pageImageFiles = SplitPdfToImages(inputPath, imagesOutputDir);
 
-                foreach (var pageImageFile in pageImageFiles)
+                var allPages = new List<MistralOcrPage>();
+                for (int i = 0; i < pageImageFiles.Count; i++)
                 {
+                    var pageImageFile = pageImageFiles[i];
                     var mistralResult = await PerformMistralOcrAsync(mistralApiKey, mistralEndpoint, pageImageFile);
-
-                    // Save Mistral OCR result as md file
-                    string mistralMdOutputPath = Path.Combine(mdMistralOutputDir, $"{Path.GetFileNameWithoutExtension(pageImageFile)}");
-                    await SaveMistralOcrMarkdownToFileAsync(mistralMdOutputPath, mistralResult);
+                    var mistralResponse = JsonSerializer.Deserialize<MistralOcrResponse>(mistralResult);
+                    if (mistralResponse?.pages != null)
+                    {
+                        foreach (var page in mistralResponse.pages)
+                        {
+                            page.index = i; // Force correct page index
+                            allPages.Add(page);
+                        }
+                    }
                 }
+                // After all pages processed, merge all results and save
+                var combinedResponse = new MistralOcrResponse { pages = allPages };
+                await SaveMistralOcrResultToPageFoldersAsync(mdMistralOutputDir, combinedResponse);
 
                 Console.WriteLine("Processing completed successfully!");
             }
@@ -118,7 +129,6 @@ public static class Program
         return outputFiles;
     }
 
-    //private static async Task<(string, MistralOcrResponse)> PerformMistralOcrAsync(string apiKey, string endpoint, string filePath)
     private static async Task<string> PerformMistralOcrAsync(string apiKey, string endpoint, string filePath)
     {
         Console.WriteLine("Performing OCR with Mistral..." + filePath);
@@ -161,12 +171,55 @@ public static class Program
             return responseContent;
         }
 
-        throw new Exception($"Mistral OCR API request failed: {response.StatusCode} - {responseContent}");
+        throw new InvalidOperationException($"Mistral OCR API request failed: {response.StatusCode} - {responseContent}");
+    }
+
+    public class MistralOcrResponse {
+        public List<MistralOcrPage>? pages { get; set; }
+    }
+    public class MistralOcrPage {
+        public int index { get; set; }
+        public string? markdown { get; set; }
+        public List<MistralOcrImage>? images { get; set; }
+    }
+    public class MistralOcrImage {
+        public string? id { get; set; }
+        public string? image_base64 { get; set; }
     }
 
     // save mistral as md
-    private static async Task SaveMistralOcrMarkdownToFileAsync(string outputPath, string ocrResult)
+    private static async Task SaveMistralOcrResultToPageFoldersAsync(string outputDir, MistralOcrResponse mistral)
     {
-        await File.WriteAllTextAsync(outputPath, ocrResult);
+        if (mistral?.pages == null) return;
+        foreach (var page in mistral.pages)
+        {
+            string pageDir = Path.Combine(outputDir, $"page-{page.index + 1}");
+            Directory.CreateDirectory(pageDir);
+            await SaveMarkdownForPageAsync(page, pageDir);
+            await SaveImagesForPageAsync(page, pageDir);
+        }
+    }
+
+    private static async Task SaveMarkdownForPageAsync(MistralOcrPage page, string pageDir)
+    {
+        string mdPath = Path.Combine(pageDir, $"page-{page.index + 1}.md");
+        await File.WriteAllTextAsync(mdPath, page.markdown ?? "");
+    }
+
+    private static async Task SaveImagesForPageAsync(MistralOcrPage page, string pageDir)
+    {
+        if (page.images == null) return;
+        foreach (var img in page.images)
+        {
+            if (!string.IsNullOrEmpty(img.image_base64) && !string.IsNullOrEmpty(img.id))
+            {
+                var base64 = img.image_base64;
+                var commaIdx = base64.IndexOf(",");
+                if (commaIdx >= 0) base64 = base64[(commaIdx + 1)..];
+                byte[] imgBytes = Convert.FromBase64String(base64);
+                string imgPath = Path.Combine(pageDir, img.id);
+                await File.WriteAllBytesAsync(imgPath, imgBytes);
+            }
+        }
     }
 }

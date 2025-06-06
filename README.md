@@ -69,10 +69,35 @@ POCMistralOCR/
 
 - **docs/output/**
   - จะสร้างโฟลเดอร์ย่อยตามชื่อไฟล์ต้นฉบับ เช่น `1.Scanned/`, `2.TablePure/` เป็นต้น
-  - ในแต่ละโฟลเดอร์ย่อยจะมีโฟลเดอร์ย่อยอีก เช่น
-    - `0.SplitPdfToImages/` : เก็บไฟล์ภาพที่แยกออกมาจากแต่ละหน้า PDF (เช่น .png)
-    - `1.MistralOCR/` : เก็บไฟล์ผลลัพธ์ที่ได้จากการ OCR ในรูปแบบ Markdown (.md)
-  - สามารถนำผลลัพธ์เหล่านี้ไปใช้งานต่อได้ตามต้องการ
+  - ในแต่ละโฟลเดอร์ย่อย (เช่น `1.Scanned/`) จะมีโฟลเดอร์ย่อยหลัก ๆ คือ
+    - `0.SplitPdfToImages/` : เก็บไฟล์ภาพ (.png) ที่แยกออกมาจากแต่ละหน้า PDF
+    - `1.MistralOCR/` : ภายในจะมีโฟลเดอร์ย่อยแยกตามหน้า เช่น `page-1/`, `page-2/` ...
+      - ในแต่ละโฟลเดอร์ page-N จะมีไฟล์ผลลัพธ์ เช่น
+        - `page-N.md` (ไฟล์ข้อความ Markdown ที่ได้จาก OCR)
+        - `img-0.jpeg` (หรือไฟล์ภาพอื่น ๆ ที่เกี่ยวข้องกับหน้านั้น)
+  - ตัวอย่างเช่น หากมีไฟล์ `4.TextWithTableWithImage.pdf` ใน docs/input จะได้โครงสร้างดังนี้:
+
+```text
+docs/
+├── input/
+│   ├── 4.TextWithTableWithImage.pdf
+│   └── ...
+└── output/
+    └── 4.TextWithTableWithImage/
+        ├── 0.SplitPdfToImages/
+        │   ├── 4.TextWithTableWithImage-1.png
+        │   └── ...
+        └── 1.MistralOCR/
+            ├── page-1/
+            │   ├── page-1.md
+            │   └── img-0.jpeg
+            ├── page-2/
+            │   ├── page-2.md
+            │   └── ...
+            └── ...
+```
+
+- docs/output จะจัดเก็บผลลัพธ์แยกตามไฟล์ต้นฉบับ โดยแต่ละไฟล์จะมีโฟลเดอร์สำหรับภาพที่แยกจาก PDF และโฟลเดอร์สำหรับผลลัพธ์ OCR ที่แยกตามหน้า
 
 #### โครงสร้างไฟล์ใน docs/input และ docs/output (โดยสังเขป)
 
@@ -91,26 +116,7 @@ POCMistralOCR/
     - 4.TextWithTableWithImage/
   - ในแต่ละโฟลเดอร์ย่อยจะประกอบด้วย:
     - 0.SplitPdfToImages/   (เก็บไฟล์ .png ที่แยกจากแต่ละหน้า PDF)
-    - 1.MistralOCR/   (เก็บไฟล์ .md ผลลัพธ์จาก OCR)
-
-ตัวอย่าง:
-
-```text
-docs/
-├── input/
-│   ├── 1.Scanned.pdf
-│   ├── 2.TablePure.pdf
-│   └── ...
-└── output/
-    ├── 1.Scanned/
-    │   ├── 0.SplitPdfToImages/
-    │   │   ├── 1.Scanned-1.png
-    │   │   └── ...
-    │   └── 1.MistralOCR/
-    │       ├── 1.Scanned-1.md
-    │       └── ...
-    └── ...
-```
+    - 1.MistralOCR/   (แยกโฟลเดอร์ page-N สำหรับแต่ละหน้า เก็บ .md และภาพที่เกี่ยวข้อง)
 
 ## การตั้งค่า
 
