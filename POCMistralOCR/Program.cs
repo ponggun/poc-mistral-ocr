@@ -30,53 +30,7 @@ public static class Program
 
             foreach (var inputPath in inputFiles.OrderBy(f => f, StringComparer.OrdinalIgnoreCase))
             {
-                string inputFileName = Path.GetFileName(inputPath);
-                string outputPath = Path.Combine(rootDocumentPath, "output", Path.GetFileNameWithoutExtension(inputPath));
-
-                // clear output directory
-                if (Directory.Exists(outputPath))
-                    Directory.Delete(outputPath, true);
-
-                Console.WriteLine($"Processing: {inputFileName}");
-                Console.WriteLine($"Input path: {inputPath}");
-
-                // Check if input file exists
-                if (!File.Exists(inputPath))
-                {
-                    Console.WriteLine($"Error: Input file not found at {inputPath}");
-                    continue;
-                }
-
-                // Split PDF into images
-                Console.WriteLine($"Splitting PDF into images...");
-                string imagesOutputDir = Path.Combine(outputPath, "0.SplitPdfToImages");
-                string mdMistralOutputDir = Path.Combine(outputPath, "1.MistralOCR");
-
-                Directory.CreateDirectory(imagesOutputDir);
-                Directory.CreateDirectory(mdMistralOutputDir);
-
-                var pageImageFiles = SplitPdfToImages(inputPath, imagesOutputDir);
-
-                var allPages = new List<MistralOcrPage>();
-                for (int i = 0; i < pageImageFiles.Count; i++)
-                {
-                    var pageImageFile = pageImageFiles[i];
-                    var mistralResult = await PerformMistralOcrAsync(mistralApiKey, mistralEndpoint, pageImageFile);
-                    var mistralResponse = JsonSerializer.Deserialize<MistralOcrResponse>(mistralResult);
-                    if (mistralResponse?.pages != null)
-                    {
-                        foreach (var page in mistralResponse.pages)
-                        {
-                            page.index = i; // Force correct page index
-                            allPages.Add(page);
-                        }
-                    }
-                }
-                // After all pages processed, merge all results and save
-                var combinedResponse = new MistralOcrResponse { pages = allPages };
-                await SaveMistralOcrResultToPageFoldersAsync(mdMistralOutputDir, combinedResponse);
-
-                Console.WriteLine("Processing completed successfully!");
+                await ProcessPdfFile(inputPath, rootDocumentPath, mistralApiKey, mistralEndpoint);
             }
         }
         catch (Exception ex)
@@ -84,6 +38,62 @@ public static class Program
             Console.WriteLine($"Error: {ex.Message}");
             Environment.Exit(1);
         }
+    }
+
+    // ประมวลผล PDF ทีละไฟล์
+    private static async Task ProcessPdfFile(string inputPath, string rootDocumentPath, string mistralApiKey, string mistralEndpoint)
+    {
+        string inputFileName = Path.GetFileName(inputPath);
+        string outputPath = Path.Combine(rootDocumentPath, "output", Path.GetFileNameWithoutExtension(inputPath));
+
+        PrepareOutputDirectory(outputPath);
+
+        Console.WriteLine($"Processing: {inputFileName}");
+        Console.WriteLine($"Input path: {inputPath}");
+
+        if (!File.Exists(inputPath))
+        {
+            Console.WriteLine($"Error: Input file not found at {inputPath}");
+            return;
+        }
+
+        // Split PDF เป็นรูปภาพ
+        Console.WriteLine($"Splitting PDF into images...");
+        string imagesOutputDir = Path.Combine(outputPath, "0.SplitPdfToImages");
+        string mdMistralOutputDir = Path.Combine(outputPath, "1.MistralOCR");
+        Directory.CreateDirectory(imagesOutputDir);
+        Directory.CreateDirectory(mdMistralOutputDir);
+
+        var pageImageFiles = SplitPdfToImages(inputPath, imagesOutputDir);
+        var allPages = new List<MistralOcrPage>();
+
+        // OCR ทีละหน้า
+        for (int i = 0; i < pageImageFiles.Count; i++)
+        {
+            var pageImageFile = pageImageFiles[i];
+            var mistralResult = await PerformMistralOcrAsync(mistralApiKey, mistralEndpoint, pageImageFile);
+            var mistralResponse = JsonSerializer.Deserialize<MistralOcrResponse>(mistralResult);
+            if (mistralResponse?.pages != null)
+            {
+                foreach (var page in mistralResponse.pages)
+                {
+                    page.index = i; // Force correct page index
+                    allPages.Add(page);
+                }
+            }
+        }
+
+        // รวมผลลัพธ์และบันทึก
+        var combinedResponse = new MistralOcrResponse { pages = allPages };
+        await SaveMistralOcrResultToPageFoldersAsync(mdMistralOutputDir, combinedResponse);
+        Console.WriteLine("Processing completed successfully!");
+    }
+
+    // เตรียม output directory (ลบของเก่า ถ้ามี)
+    private static void PrepareOutputDirectory(string outputPath)
+    {
+        if (Directory.Exists(outputPath))
+            Directory.Delete(outputPath, true);
     }
 
     private static IConfiguration LoadConfiguration()
