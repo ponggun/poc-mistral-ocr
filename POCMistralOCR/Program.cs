@@ -26,7 +26,7 @@ public static class Program
             // Load configuration
             var configuration = LoadConfiguration();
             var mistralApiKey = configuration["MistralOCR:ApiKey"] ?? throw new InvalidOperationException("Mistral API key not configured");
-            var mistralEndpoint = configuration["MistralOCR:Endpoint"] ?? "https://api.mistral.ai/v1/chat/completions";
+            var mistralEndpoint = configuration["MistralOCR:Endpoint"] ?? throw new InvalidOperationException("Mistral endpoint not configured");
 
             foreach (var inputPath in inputFiles.OrderBy(f => f, StringComparer.OrdinalIgnoreCase))
             {

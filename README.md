@@ -39,6 +39,21 @@ POCMistralOCR/
   2. ไปที่เมนู API Keys แล้วสร้าง API Key ใหม่
   3. นำ API Key ที่ได้ไปใส่ในไฟล์ `POCMistralOCR/appsettings.json` ในส่วน `MistralOCR:ApiKey`
 
+## NuGet Packages ที่ใช้ในโปรเจกต์นี้
+
+| Package Name                        | Version   | ใช้เพื่ออะไร                                    |
+|-------------------------------------|-----------|-------------------------------------------------|
+| Docnet.Core                        | 2.6.0     | สำหรับอ่านและแปลงไฟล์ PDF เป็นภาพ (split PDF)   |
+| Microsoft.Extensions.Configuration | 9.0.5     | สำหรับโหลดและจัดการคอนฟิก (เช่น appsettings)   |
+| Microsoft.Extensions.Configuration.Json | 9.0.5 | สำหรับอ่านคอนฟิกจากไฟล์ JSON (appsettings.json) |
+| SkiaSharp                           | 3.119.0   | สำหรับประมวลผลและบันทึกไฟล์ภาพ (PNG)           |
+
+**รายละเอียดแต่ละ package:**
+- **Docnet.Core**: ไลบรารีสำหรับอ่านไฟล์ PDF และแปลงแต่ละหน้าเป็นภาพ bitmap ได้อย่างรวดเร็ว เหมาะกับงาน OCR ที่ต้องแยกหน้า PDF
+- **Microsoft.Extensions.Configuration**: ไลบรารีมาตรฐานของ .NET สำหรับโหลดคอนฟิก เช่น API Key, Endpoint ฯลฯ
+- **Microsoft.Extensions.Configuration.Json**: ส่วนเสริมที่ช่วยให้ .NET โหลดคอนฟิกจากไฟล์ JSON ได้ง่าย (ใช้กับ appsettings.json)
+- **SkiaSharp**: ไลบรารีกราฟิก cross-platform สำหรับสร้าง/บันทึก/แปลงไฟล์ภาพ เช่น PNG, JPEG ฯลฯ ใช้ร่วมกับ Docnet.Core เพื่อบันทึกภาพแต่ละหน้าของ PDF
+
 ## วิธีการใช้งาน
 
 1. ติดตั้ง .NET 8.0 หรือเวอร์ชันที่รองรับ
