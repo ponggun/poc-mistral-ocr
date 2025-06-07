@@ -46,6 +46,11 @@ Mistral AI คือบริษัทเทคโนโลยีด้านป
 
 Mistral OCR คือบริการ OCR ที่พัฒนาโดย Mistral AI โดดเด่นด้วยความแม่นยำสูง รองรับหลายภาษา และใช้งานผ่าน API ได้ง่าย ต่างจาก OCR ทั่วไปตรงที่มี AI Model ที่ทันสมัยและปรับแต่งได้ตามงานเฉพาะทาง
 
+## ค่าใช้จ่ายของ Mistral OCR
+
+- Mistral OCR คิดค่าบริการตามจำนวนหน้าหรือจำนวนคำที่ประมวลผล
+- มีแพ็กเกจฟรีและแบบชำระเงิน ขึ้นกับปริมาณการใช้งาน
+
 # วิธีสมัครและขอ Mistral OCR API Key
 
 1. สมัครสมาชิกที่ [Mistral AI](https://mistral.ai)
@@ -58,59 +63,79 @@ Mistral OCR คือบริการ OCR ที่พัฒนาโดย Mi
 sequenceDiagram
     participant User
     participant App
-    participant PDF/Image File
+    participant PDFFile
     participant MistralOCR_API
     participant Output
 
-    User->>App: เลือกไฟล์ PDF หรือภาพเอกสาร
-    App->>PDF/Image File: อ่านไฟล์เอกสาร
-    alt ถ้าเป็น PDF
-        App->>App: แปลง PDF เป็นภาพ (Image)
+    User->>App: สั่งประมวลผลไฟล์ PDF ทั้งหมดใน input
+    loop ทีละไฟล์ PDF
+        App->>App: เตรียม output (ลบของเก่า)
+        App->>App: แปลง PDF เป็นภาพ PNG ทีละหน้า
+        loop ทีละหน้า
+            App->>MistralOCR_API: ส่งภาพ (base64) ไปยัง API
+            MistralOCR_API-->>App: ส่งผลลัพธ์ JSON (markdown + images)
+        end
+        App->>App: รวมผลลัพธ์ทุกหน้า
+        App->>App: แยกผลลัพธ์แต่ละหน้า
+        loop ทีละหน้า
+            App->>Output: สร้างโฟลเดอร์ page-x ใน 1.MistralOCR
+            App->>App: post-process markdown (fix table, image tag)
+            App->>Output: save markdown (page-x.md)
+            App->>Output: save images OCR (ถ้ามี)
+        end
     end
-    loop ทีละภาพ (ลดขนาดข้อมูล)
-        App->>MistralOCR_API: ส่งภาพแต่ละหน้าทีละไฟล์ไปยัง Mistral OCR API (พร้อม API Key)
-        MistralOCR_API-->>App: ส่งผลลัพธ์ข้อความ OCR กลับมา (JSON)
-        App->>App: แปลง JSON เป็นไฟล์ Markdown (.md) และบันทึกภาพ
-        App->>App: สร้างลิงก์ภาพในไฟล์ .md ให้ดูผล OCR คู่กับภาพต้นฉบับ
-    end
-    App->>Output: บันทึกผลลัพธ์ลงโฟลเดอร์ output
-    App->>User: แสดงผลลัพธ์ OCR ในคอนโซล/ไฟล์
+    App->>User: แสดงผลลัพธ์/สถานะในคอนโซล
 ```
 
-# อธิบายผลลัพธ์ OCR ที่ได้
+# อธิบายผลลัพธ์ OCR ที่ได้ (ละเอียด)
 
-- ผลลัพธ์ข้อความที่ได้จาก Mistral OCR จะถูกส่งกลับมาในรูปแบบ JSON ซึ่งประกอบด้วยข้อมูลข้อความที่ตรวจจับได้ ตำแหน่งของข้อความ และข้อมูลเกี่ยวกับภาพแต่ละหน้า
-- ระบบจะนำข้อมูล JSON นี้มาแปลงเป็นไฟล์ Markdown (`.md`) โดยแต่ละหน้าของเอกสารจะมีไฟล์ `.md` แยกต่างหาก และในแต่ละไฟล์จะมีการลิงก์ (link) ไปยังภาพต้นฉบับของแต่ละหน้า
-- ภาพแต่ละหน้าที่แยกออกมาจาก PDF จะถูกบันทึกไว้ในโฟลเดอร์ `0.SplitPdfToImages/` ภายใต้เอกสารแต่ละประเภท
-- ในไฟล์ Markdown ที่ได้ จะมีการฝังลิงก์หรือแสดงภาพ (`![alt](path/to/image)`) เพื่อให้สามารถดูภาพต้นฉบับและผลลัพธ์ OCR ได้ในเอกสารเดียวกัน
-- ตัวอย่างโครงสร้างไฟล์:
+- โปรแกรมจะค้นหาไฟล์ PDF ทั้งหมดในโฟลเดอร์ input
+- สำหรับแต่ละไฟล์ PDF:
+    - แปลง PDF เป็นภาพ PNG ทีละหน้า แล้วส่งไปยัง Mistral OCR API ทีละหน้า
+    - รวมผลลัพธ์ JSON ของทุกหน้า
+    - สำหรับแต่ละหน้า:
+        1. **สร้างโฟลเดอร์** `1.MistralOCR/page-x/`
+        2. **Post-process Markdown**
+            - ตรวจสอบและปรับรูปแบบตาราง (table) ให้ cell อยู่บรรทัดเดียว
+            - ตรวจสอบและแยก image tag (`![...](...)`) ให้อยู่บรรทัดใหม่และมีบรรทัดว่างก่อนหน้า
+        3. **บันทึกไฟล์ Markdown**
+            - สร้างไฟล์ `page-x.md` ในโฟลเดอร์นั้น
+            - เนื้อหา markdown จะมีลิงก์ไปยังภาพต้นฉบับ (../0.SplitPdfToImages/xxx.png)
+        4. **บันทึกไฟล์ภาพ OCR**
+            - หากในผลลัพธ์มี image OCR (base64) จะถูก decode และ save เป็นไฟล์ภาพในโฟลเดอร์เดียวกัน
+
+- โครงสร้างไฟล์ตัวอย่าง:
 
 ```text
 docs/output/1.Scanned/
   0.SplitPdfToImages/
-    page1.png
-    page2.png
+    1.Scanned-1.png
+    1.Scanned-2.png
   1.MistralOCR/
     page-1/
-      page-1.md   <-- มีลิงก์ไปยัง ../0.SplitPdfToImages/page1.png
-      page-1.png
+      page-1.md   <-- มีลิงก์ไปยัง image.jpg
+      image.jpg (ไฟล์ภาพ OCR ถ้ามี)
     page-2/
       page-2.md
-      page-2.png
+      ...
 ```
 
-- ตัวอย่างเนื้อหาในไฟล์ `page-1.md`:
-
-```markdown
-# ผลลัพธ์ OCR หน้า 1
-
-![page1](../0.SplitPdfToImages/page1.png)
-
-ข้อความที่ตรวจจับได้:
-- ...ข้อความจาก OCR...
-```
+- ตัวอย่างเนื้อหาในไฟล์
+   - [Text Only](./POCMistralOCR/docs/output/1.Scanned/1.MistralOCR/page-1/page-1.md)
+   - [Table Only](./POCMistralOCR/docs/output/2.TablePure/1.MistralOCR/page-1/page-1.md)
+   - [Image Only](./POCMistralOCR/docs/output/3.Image/1.MistralOCR/page-1/page-1.md)
+   - [Text + Table + Image](./POCMistralOCR/docs/output/4.TextWithTableWithImage/1.MistralOCR/)
 
 - ผู้ใช้สามารถเปิดไฟล์ `.md` เพื่อดูผลลัพธ์ข้อความและคลิกดูภาพต้นฉบับแต่ละหน้าได้ทันที
+
+## หมายเหตุและข้อควรรู้เกี่ยวกับการใช้งานโปรเจกต์
+
+- **รองรับเฉพาะไฟล์ PDF**: เวอร์ชันปัจจุบันรองรับเฉพาะไฟล์ PDF ในโฟลเดอร์ `docs/input` หากต้องการรองรับไฟล์ภาพ (JPG, PNG) ต้องพัฒนาเพิ่ม
+- **การตั้งชื่อไฟล์ output**: ภาพที่แยกจาก PDF จะถูกตั้งชื่อเป็น `[ชื่อไฟล์ต้นฉบับ]-[เลขหน้า].png` เช่น `1.Scanned-1.png` ส่วน markdown จะอยู่ใน `1.MistralOCR/page-x/page-x.md`
+- **output จะถูกลบและสร้างใหม่ทุกครั้ง**: ทุกครั้งที่รันโปรแกรม โฟลเดอร์ output ของแต่ละไฟล์จะถูกลบและสร้างใหม่ ผลลัพธ์เก่าจะหายไป
+- **คุณภาพไฟล์ต้นฉบับมีผลต่อผลลัพธ์ OCR**: หาก PDF/ภาพต้นฉบับไม่ชัดเจน มีรอยเปื้อน หรือฟอนต์แปลก อาจทำให้ผลลัพธ์ไม่สมบูรณ์
+- **การ post-process markdown**: การจัดรูปแบบตารางและแยก image tag ช่วยให้ markdown อ่านง่ายขึ้นและนำไปใช้งานต่อได้สะดวก
+- **ตำแหน่ง output**: ผลลัพธ์ทั้งหมดจะอยู่ใน `docs/output/[ชื่อไฟล์ต้นฉบับ]/`
 
 # วิธีติดตั้ง .NET 8
 
@@ -118,19 +143,21 @@ docs/output/1.Scanned/
 2. ติดตั้งตามขั้นตอนที่ระบบปฏิบัติการของคุณแนะนำ
 3. ตรวจสอบด้วยคำสั่ง `dotnet --version`
 
-## จักรวาลของ Mistral AI
-
-Mistral AI มีบริการหลากหลาย เช่น OCR, Translation, Summarization, และ AI Model อื่น ๆ ที่เน้นงานเอกสารและภาษา
-
 # การใช้งาน Mistral OCR และการใส่ API Key ในโปรเจกต์
 
 - นำ API Key ที่ได้มาใส่ในไฟล์ `appsettings.json` หรือกำหนดเป็น Environment Variable
 - ตัวอย่างในโปรเจกต์นี้จะอ่าน API Key จากไฟล์คอนฟิก
 
-## ค่าใช้จ่ายของ Mistral OCR
+## ตัวอย่างไฟล์ appsettings.json
 
-- Mistral OCR คิดค่าบริการตามจำนวนหน้าหรือจำนวนคำที่ประมวลผล
-- มีแพ็กเกจฟรีและแบบชำระเงิน ขึ้นกับปริมาณการใช้งาน
+```json
+{
+  "MistralOCR": {
+    "ApiKey": "YOUR_API_KEY",
+    "Endpoint": "https://api.mistral.ai/v1/chat/completions"
+  }
+}
+```
 
 # ตัวอย่างเอกสาร 4 ประเภทและจุดประสงค์
 

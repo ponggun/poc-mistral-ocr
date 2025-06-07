@@ -2,6 +2,12 @@
 
 โปรเจกต์นี้เป็นตัวอย่างการใช้งาน OCR (Optical Character Recognition) ร่วมกับโมเดล Mistral สำหรับแปลงไฟล์ PDF หรือรูปภาพให้เป็นข้อความ
 
+
+ศึกษารายละเอียดเชิงลึกได้ที่
+- [Youtube](./blog.md)
+- [Blog ใน Medium](./blog.md)
+- [Blog ใน Project นี้](./blog.md)
+
 ## คุณสมบัติ
 
 - รองรับไฟล์ PDF และรูปภาพ
@@ -19,6 +25,11 @@ POCMistralOCR/
 │   └── output/
 └── ...
 ```
+## ตัวอย่างผลลัพธํจากการทำ OCR
+- [Text Only](./POCMistralOCR/docs/output/1.Scanned/1.MistralOCR/page-1/page-1.md)
+- [Table Only](./POCMistralOCR/docs/output/2.TablePure/1.MistralOCR/page-1/page-1.md)
+- [Image Only](./POCMistralOCR/docs/output/3.Image/1.MistralOCR/page-1/page-1.md)
+- [Text + Table + Image](./POCMistralOCR/docs/output/4.TextWithTableWithImage/1.MistralOCR/)
 
 ## การใช้งานและขอ Access Token สำหรับ Mistral OCR
 

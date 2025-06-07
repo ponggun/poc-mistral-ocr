@@ -213,7 +213,130 @@ public static class Program
     private static async Task SaveMarkdownForPageAsync(MistralOcrPage page, string pageDir)
     {
         string mdPath = Path.Combine(pageDir, $"page-{page.index + 1}.md");
-        await File.WriteAllTextAsync(mdPath, page.markdown ?? "");
+        string markdown = page.markdown ?? "";
+        // Post-process: จัดการตาราง
+        if (ContainsMarkdownTable(markdown))
+        {
+            markdown = FixMarkdownTableFormat(markdown);
+        }
+        // Post-process: จัดการ tag image ให้ขึ้นบรรทัดใหม่ เฉพาะกรณีมี image
+        if (ContainsMarkdownImage(markdown))
+        {
+            markdown = FixImageTagNewline(markdown);
+        }
+        await File.WriteAllTextAsync(mdPath, markdown);
+    }
+
+    // ตรวจสอบว่า markdown มี image tag หรือไม่
+    private static bool ContainsMarkdownImage(string markdown)
+    {
+        return markdown.Contains("![");
+    }
+
+    // ให้ tag รูปภาพ ![...](...) ขึ้นบรรทัดใหม่และมีบรรทัดว่างคั่นก่อนหน้าเสมอ
+    private static string FixImageTagNewline(string markdown)
+    {
+        var pattern = @"!\[.*?\]\(.*?\)";
+        var lines = markdown.Split('\n');
+        var newLines = new List<string>();
+        foreach (var line in lines)
+        {
+            if (line.Contains("!["))
+            {
+                var result = SplitLineByImageTagsWithBlankLine(line, pattern, newLines.Count > 0 ? newLines[^1] : null);
+                newLines.AddRange(result);
+            }
+            else
+            {
+                newLines.Add(line);
+            }
+        }
+        return string.Join("\n", newLines);
+    }
+
+    // แยกข้อความกับ tag รูปภาพออกเป็นบรรทัดใหม่ และแทรกบรรทัดว่างก่อน tag รูปภาพ
+    private static IEnumerable<string> SplitLineByImageTagsWithBlankLine(string line, string pattern, string? prevLine)
+    {
+        int lastIndex = 0;
+        bool addedBlank = false;
+        foreach (System.Text.RegularExpressions.Match match in System.Text.RegularExpressions.Regex.Matches(line, pattern))
+        {
+            if (match.Index > lastIndex)
+            {
+                var before = line.Substring(lastIndex, match.Index - lastIndex).Trim();
+                if (!string.IsNullOrEmpty(before))
+                    yield return before;
+            }
+            // แทรกบรรทัดว่างก่อน tag รูปภาพ ถ้าบรรทัดก่อนหน้าไม่ว่างและยังไม่ได้แทรก
+            if (!addedBlank && (prevLine != null && !string.IsNullOrWhiteSpace(prevLine)))
+            {
+                yield return "";
+                addedBlank = true;
+            }
+            yield return match.Value.Trim();
+            lastIndex = match.Index + match.Length;
+        }
+        if (lastIndex < line.Length)
+        {
+            var after = line.Substring(lastIndex).Trim();
+            if (!string.IsNullOrEmpty(after))
+                yield return after;
+        }
+    }
+
+    // ตรวจสอบว่า markdown มีตารางหรือไม่
+    private static bool ContainsMarkdownTable(string markdown)
+    {
+        var lines = markdown.Split('\n');
+        bool hasTableHeader = false;
+        foreach (var line in lines)
+        {
+            if (line.Trim().StartsWith('|') && line.Contains("---"))
+            {
+                hasTableHeader = true;
+                break;
+            }
+        }
+        return hasTableHeader;
+    }
+
+    // รวม cell ที่ขึ้นบรรทัดใหม่ให้อยู่ในบรรทัดเดียว (fix เฉพาะตาราง)
+    private static string FixMarkdownTableFormat(string markdown)
+    {
+        var lines = markdown.Split('\n');
+        var newLines = new List<string>();
+        bool inTable = false;
+        StringBuilder currentRow = new StringBuilder();
+        foreach (var line in lines)
+        {
+            if (line.Trim().StartsWith('|'))
+            {
+                inTable = true;
+                if (currentRow.Length > 0)
+                {
+                    newLines.Add(currentRow.ToString());
+                    currentRow.Clear();
+                }
+                currentRow.Append(line.Trim());
+            }
+            else if (inTable && !string.IsNullOrWhiteSpace(line))
+            {
+                currentRow.Append(" " + line.Trim());
+            }
+            else
+            {
+                if (currentRow.Length > 0)
+                {
+                    newLines.Add(currentRow.ToString());
+                    currentRow.Clear();
+                }
+                inTable = false;
+                newLines.Add(line);
+            }
+        }
+        if (currentRow.Length > 0)
+            newLines.Add(currentRow.ToString());
+        return string.Join("\n", newLines);
     }
 
     private static async Task SaveImagesForPageAsync(MistralOcrPage page, string pageDir)
