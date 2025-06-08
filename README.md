@@ -4,8 +4,9 @@
 
 
 ศึกษารายละเอียดเชิงลึกได้ที่
-- [Youtube](./blog.md)
-- [Blog ใน Medium](./blog.md)
+- [Youtube](https://youtu.be/OHtEUis2454)
+- [Podcast](https://open.spotify.com/episode/1Tx1BFoCIzsuQX15VTUPVE?si=kiLig-bXS7yUjJZK1LY78w)
+- [Blog ใน Medium](https://medium.com/t-t-software-solution/mistral-ocr-%E0%B8%94%E0%B9%89%E0%B8%A7%E0%B8%A2-net-%E0%B8%88%E0%B9%89%E0%B8%B2%E0%B8%B2-55a16ed3e6cc)
 - [Blog ใน Project นี้](./blog.md)
 
 ## คุณสมบัติ
